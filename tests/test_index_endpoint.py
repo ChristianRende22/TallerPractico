@@ -100,7 +100,9 @@ def test_index_orderby_title_asc(client, db_session):
 def test_index_invalid_per_page_returns_400(client):
     response = client.get("/posts?per_page=999")
     assert response.status_code == 400
-    assert response.json()["code"] == "VALIDATION_ERROR"
+    body = response.json()
+    assert body["code"] == "VALIDATION_ERROR"
+    assert any(d["field"] == "per_page" for d in body["details"])
 
 
 def test_index_invalid_status_returns_400(client):

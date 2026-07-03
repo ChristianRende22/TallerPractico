@@ -22,7 +22,9 @@ async def app_error_handler(request: Request, exc: AppError):
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     details = [
         {
-            "field": ".".join(str(p) for p in error["loc"] if p != "body"),
+            "field": ".".join(
+                str(p) for p in error["loc"] if p not in ("body", "query")
+            ),
             "message": error["msg"],
         }
         for error in exc.errors()
