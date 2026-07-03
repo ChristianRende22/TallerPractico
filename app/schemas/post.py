@@ -24,3 +24,8 @@ class Pagination(BaseModel):
     page: int
     per_page: int
     total_pages: int
+
+
+class PostList(BaseModel):
+    data: list[PostRead]
+    pagination: Pagination
