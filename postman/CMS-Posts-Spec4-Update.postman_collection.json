@@ -1,0 +1,467 @@
+{
+  "info": {
+    "name": "CMS Posts - Spec 4 Update",
+    "description": "Coleccion de Spec 4 (Update): PATCH/PUT /posts/{id}, incluidas las transiciones de estado y el trash lock. Antes de correrla: 1) `python -m alembic upgrade head`, 2) `python postman/seed_demo_data.py`, 3) levantar el server (`uvicorn app.main:app`). Cada request opera sobre un post dedicado sembrado por el script, para que el orden de ejecucion no rompa otro escenario.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "patch_happy_id", "value": "1" },
+    { "key": "put_happy_id", "value": "2" },
+    { "key": "patch_empty_body_id", "value": "3" },
+    { "key": "patch_empty_title_id", "value": "4" },
+    { "key": "put_missing_title_id", "value": "5" },
+    { "key": "patch_invalid_author_id", "value": "6" },
+    { "key": "slug_a_id", "value": "7" },
+    { "key": "slug_b_id", "value": "8" },
+    { "key": "trash_field_locked_id", "value": "9" },
+    { "key": "trash_restore_and_edit_id", "value": "10" },
+    { "key": "trash_restore_only_id", "value": "11" },
+    { "key": "trash_noop_id", "value": "12" },
+    { "key": "publish_first_time_id", "value": "13" },
+    { "key": "publish_again_id", "value": "14" },
+    { "key": "put_preserve_status_id", "value": "15" },
+    { "key": "put_preserve_author_id", "value": "16" },
+    { "key": "put_regen_slug_id", "value": "17" },
+    { "key": "contract_fields_id", "value": "18" },
+    { "key": "immutable_fields_id", "value": "19" },
+    { "key": "e2e_lifecycle_id", "value": "20" },
+    { "key": "nonexistent_id", "value": "999999" }
+  ],
+  "item": [
+    {
+      "name": "PATCH - Parcial",
+      "item": [
+        {
+          "name": "PATCH happy path - actualiza solo el campo enviado",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{patch_happy_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Nuevo titulo\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('title actualizado', () => pm.expect(body.title).to.eql('Nuevo titulo'));",
+              "pm.test('content preservado', () => pm.expect(body.content).to.eql('Contenido original'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH id inexistente - 404 POST_NOT_FOUND",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{nonexistent_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"x\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('404', () => pm.response.to.have.status(404));",
+              "pm.test('code POST_NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('POST_NOT_FOUND'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH body vacio - 400 VALIDATION_ERROR",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{patch_empty_body_id}}",
+            "body": { "mode": "raw", "raw": "{}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "pm.test('code VALIDATION_ERROR', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH title vacio - 400 VALIDATION_ERROR",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{patch_empty_title_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH author_id inexistente - 400 (campo author_id)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{patch_invalid_author_id}}",
+            "body": { "mode": "raw", "raw": "{\"author_id\": 9999}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "const details = pm.response.json().details;",
+              "pm.test('detalle sobre author_id', () => pm.expect(details.some(d => d.field === 'author_id')).to.be.true);"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH slug duplicado - 400 (campo slug)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{slug_a_id}}",
+            "body": { "mode": "raw", "raw": "{\"slug\": \"slug-b\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));",
+              "const details = pm.response.json().details;",
+              "pm.test('detalle sobre slug', () => pm.expect(details.some(d => d.field === 'slug')).to.be.true);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "PUT - Total",
+      "item": [
+        {
+          "name": "PUT happy path - reemplaza title/content",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{put_happy_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"T2\", \"content\": \"C2\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('title reemplazado', () => pm.expect(body.title).to.eql('T2'));",
+              "pm.test('content reemplazado', () => pm.expect(body.content).to.eql('C2'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PUT sin title - 400 VALIDATION_ERROR",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{put_missing_title_id}}",
+            "body": { "mode": "raw", "raw": "{\"content\": \"C2\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+        {
+          "name": "PUT sin status - preserva el status (publish)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{put_preserve_status_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Preserve Status Reemplazado\", \"content\": \"C2\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('status sigue en publish', () => pm.expect(pm.response.json().status).to.eql('publish'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PUT sin author_id - preserva el author_id",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{put_preserve_author_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Preserve Author Reemplazado\", \"content\": \"C2\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('author_id preservado', () => pm.expect(pm.response.json().author_id).to.eql(2));"
+            ]}
+          }]
+        },
+        {
+          "name": "PUT sin slug - regenera el slug",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{put_regen_slug_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Nuevo Titulo\", \"content\": \"C2\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('slug regenerado', () => pm.expect(pm.response.json().slug).to.not.eql('original-slug'));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Transicion a publish",
+      "item": [
+        {
+          "name": "PATCH status=publish primera vez - setea published_at",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{publish_first_time_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"publish\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('status publish', () => pm.expect(body.status).to.eql('publish'));",
+              "pm.test('published_at seteado', () => pm.expect(body.published_at).to.not.be.null);"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH status=publish repetido - no toca published_at",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{publish_again_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"publish\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('published_at sin cambios (seedeado en el pasado)', () => pm.expect(body.published_at.startsWith('2020-01-01')).to.be.true);",
+              "pm.test('updated_at presente', () => pm.expect(body.updated_at).to.not.be.null);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Trash lock - Restauracion",
+      "item": [
+        {
+          "name": "PATCH campo sobre post en trash - 422 TRASH_POST_LOCKED",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{trash_field_locked_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"x\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('422', () => pm.response.to.have.status(422));",
+              "pm.test('code TRASH_POST_LOCKED', () => pm.expect(pm.response.json().code).to.eql('TRASH_POST_LOCKED'));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH restaurar + editar junto - 422 (rechazo total)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{trash_restore_and_edit_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"draft\", \"title\": \"x\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('422', () => pm.response.to.have.status(422));"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH status=trash sobre post en trash - no-op, 200",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{trash_noop_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"trash\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('deleted_at sigue seteado', () => pm.expect(pm.response.json().deleted_at).to.not.be.null);"
+            ]}
+          }]
+        },
+        {
+          "name": "PATCH status=draft solo - restaura, 200",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{trash_restore_only_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"draft\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('status draft', () => pm.expect(body.status).to.eql('draft'));",
+              "pm.test('deleted_at limpio', () => pm.expect(body.deleted_at).to.be.null);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Contratos generales",
+      "item": [
+        {
+          "name": "Respuesta tiene exactamente los 11 campos canonicos",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{contract_fields_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"x\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const expected = ['id','title','content','excerpt','slug','status','author_id','created_at','updated_at','published_at','deleted_at'].sort();",
+              "const actual = Object.keys(pm.response.json()).sort();",
+              "pm.test('11 campos exactos', () => pm.expect(actual).to.eql(expected));"
+            ]}
+          }]
+        },
+        {
+          "name": "id y created_at son inmutables aunque se envien",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{immutable_fields_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"cambio real\", \"id\": 9999, \"created_at\": \"2000-01-01T00:00:00\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('id no cambio', () => pm.expect(body.id).to.eql(parseInt(pm.collectionVariables.get('immutable_fields_id'))));",
+              "pm.test('created_at no cambio', () => pm.expect(body.created_at.startsWith('2000-01-01')).to.be.false);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "E2E - Ciclo de vida completo",
+      "item": [
+        {
+          "name": "1. PATCH editar titulo",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Editado\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "2. PUT reemplazar contenido",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"Reemplazado\", \"content\": \"Nuevo\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "3. PATCH publicar",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"publish\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('published_at seteado', () => pm.expect(pm.response.json().published_at).to.not.be.null);"
+            ]}
+          }]
+        },
+        {
+          "name": "4. PATCH enviar a trash",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"trash\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('deleted_at seteado', () => pm.expect(pm.response.json().deleted_at).to.not.be.null);"
+            ]}
+          }]
+        },
+        {
+          "name": "5. PATCH edicion bloqueada en trash",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"title\": \"no permitido\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('422 TRASH_POST_LOCKED', () => pm.response.to.have.status(422));"] }
+          }]
+        },
+        {
+          "name": "6. PATCH restaurar",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/posts/{{e2e_lifecycle_id}}",
+            "body": { "mode": "raw", "raw": "{\"status\": \"draft\"}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('deleted_at limpio', () => pm.expect(pm.response.json().deleted_at).to.be.null);"
+            ]}
+          }]
+        }
+      ]
+    }
+  ]
+}
