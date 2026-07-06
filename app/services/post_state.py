@@ -1,18 +1,32 @@
+from datetime import datetime, timezone
+
+from app.errors.exceptions import InvalidStatusTransition
+
+
 class PostStateService:
-    """Contrato de transiciones de estado de Post. Implementacion: Spec 4 (P5).
-
-    Reglas acordadas (NO implementadas aqui):
-    - draft/pending/private -> publish: exige title y content no vacios;
-      setea published_at solo la primera vez.
-    - cualquiera -> trash: setea deleted_at.
-    - trash -> otro: limpia deleted_at (restauracion).
-    - Regla dura: post en trash no acepta update de campos -> 422 TRASH_POST_LOCKED.
-
-    Consumidores (P6/Delete) codean contra esta interfaz desde el dia 1.
-    """
+    """Motor de transiciones de estado de Post. Implementado en Spec 4 (P5)."""
 
     def can_transition(self, post, new_status: str) -> bool:
-        raise NotImplementedError("PostStateService.can_transition — Spec 4 (P5)")
+        if new_status == "publish":
+            return bool(post.title) and bool(post.content)
+        return True
 
     def transition(self, post, new_status: str):
-        raise NotImplementedError("PostStateService.transition — Spec 4 (P5)")
+        if new_status == post.status:
+            return post
+
+        if new_status == "publish":
+            if not self.can_transition(post, new_status):
+                raise InvalidStatusTransition(
+                    "Cannot publish a post with empty title or content"
+                )
+            if post.published_at is None:
+                post.published_at = datetime.now(timezone.utc)
+
+        if new_status == "trash":
+            post.deleted_at = datetime.now(timezone.utc)
+        elif post.status == "trash":
+            post.deleted_at = None
+
+        post.status = new_status
+        return post
