@@ -1,0 +1,162 @@
+{
+  "info": {
+    "_postman_id": "b0193add-b760-4778-abe4-31bbcf71cdbf",
+    "name": "TallerPractico - Spec 3",
+    "description": "Colección para probar los casos de uso de Spec 3 de la API de Posts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51672668",
+    "_collection_link": "https://go.postman.co/collection/51672668-b0193add-b760-4778-abe4-31bbcf71cdbf?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://127.0.0.1:8000/health",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Post Success Minimal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Mi primer post\", \"content\": \"Contenido del post\"}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/posts/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "posts",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Post Success With Status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Post publicado\", \"content\": \"Contenido\", \"status\": \"publish\"}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/posts/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "posts",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Post Missing Title",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"content\": \"Contenido sin titulo\"}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/posts/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "posts",
+            ""
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Post Missing Content",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"Titulo sin contenido\"}"
+        },
+        "url": {
+          "raw": "http://127.0.0.1:8000/posts/",
+          "protocol": "http",
+          "host": [
+            "127",
+            "0",
+            "0",
+            "1"
+          ],
+          "port": "8000",
+          "path": [
+            "posts",
+            ""
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

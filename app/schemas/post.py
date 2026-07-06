@@ -1,6 +1,12 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class PostCreate(BaseModel):
+    title: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1)
+    status: str = Field(default="draft")
 
 
 class PostRead(BaseModel):
