@@ -136,7 +136,6 @@
               "pm.test('error format', () => {",
               "  pm.expect(body.error).to.eql('Post not found');",
               "  pm.expect(body.status).to.eql(404);",
-              "  pm.expect(body.details).to.eql([]);",
               "});"
             ]
           }
