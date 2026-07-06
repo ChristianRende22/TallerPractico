@@ -179,12 +179,13 @@ npx newman run "postman/CMS-Posts-Spec4-Update.postman_collection.json"
 |--------------|----------|------------|-----------|
 | Spec 1 Index | 11       | 23         | ✅        |
 | Spec 2 Show  | 3        | 13         | ✅        |
-| Spec 3 Create| 5        | 0*         | ✅ (ejecuta) |
+| Spec 3 Create| 5        | 17         | ✅        |
 | Spec 4 Update| 25       | 50         | ✅        |
 | Spec 5 Delete| 6        | 16         | ✅        |
 
-\* La colección de Spec 3 ejecuta sus requests correctamente (201 al crear, 400 en
-validación) pero todavía no tiene _test scripts_ que hagan assertions.
+> La colección de Spec 3 es **auto-contenida y re-ejecutable**: un token único por
+> corrida en los títulos evita colisiones de `slug`, así se puede correr las veces
+> que sea sin resembrar la BD.
 
 ---
 

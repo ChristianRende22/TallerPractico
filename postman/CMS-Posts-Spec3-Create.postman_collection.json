@@ -2,36 +2,92 @@
   "info": {
     "_postman_id": "b0193add-b760-4778-abe4-31bbcf71cdbf",
     "name": "CMS Posts - Spec 3 Create",
-    "description": "Colección para probar los casos de uso de Spec 3 de la API de Posts.",
+    "description": "Colección para probar los casos de uso de Spec 3 (POST /posts) de la API de Posts.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "51672668",
     "_collection_link": "https://go.postman.co/collection/51672668-b0193add-b760-4778-abe4-31bbcf71cdbf?source=collection_link"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Token unico por corrida: los titulos (y por ende los slugs) nunca colisionan,",
+          "// asi la coleccion se puede correr las veces que sea sin resembrar la BD.",
+          "if (!pm.collectionVariables.get('run_token')) {",
+          "  pm.collectionVariables.set('run_token', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
     {
       "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('status ok', () => {",
+              "  pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "header": [],
         "url": {
           "raw": "http://127.0.0.1:8000/health",
           "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
+          "host": ["127", "0", "0", "1"],
           "port": "8000",
-          "path": [
-            "health"
-          ]
+          "path": ["health"]
         }
       },
       "response": []
     },
     {
       "name": "Create Post Success Minimal",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "const token = pm.collectionVariables.get('run_token');",
+              "",
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "",
+              "pm.test('respuesta con los 11 campos canonicos', () => {",
+              "  pm.expect(Object.keys(body).sort()).to.eql([",
+              "    'author_id', 'content', 'created_at', 'deleted_at', 'excerpt',",
+              "    'id', 'published_at', 'slug', 'status', 'title', 'updated_at'",
+              "  ]);",
+              "});",
+              "",
+              "pm.test('title y content coinciden con lo enviado', () => {",
+              "  pm.expect(body.title).to.eql('Mi primer post ' + token);",
+              "  pm.expect(body.content).to.eql('Contenido del post');",
+              "});",
+              "",
+              "pm.test('slug generado a partir del titulo', () => {",
+              "  pm.expect(body.slug).to.eql('mi-primer-post-' + token);",
+              "});",
+              "",
+              "pm.test('status por defecto = draft', () => {",
+              "  pm.expect(body.status).to.eql('draft');",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -42,28 +98,46 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"title\": \"Mi primer post\", \"content\": \"Contenido del post\"}"
+          "raw": "{\"title\": \"Mi primer post {{run_token}}\", \"content\": \"Contenido del post\"}"
         },
         "url": {
           "raw": "http://127.0.0.1:8000/posts/",
           "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
+          "host": ["127", "0", "0", "1"],
           "port": "8000",
-          "path": [
-            "posts",
-            ""
-          ]
+          "path": ["posts", ""]
         }
       },
       "response": []
     },
     {
       "name": "Create Post Success With Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "const token = pm.collectionVariables.get('run_token');",
+              "",
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "",
+              "pm.test('respeta el status enviado (publish)', () => {",
+              "  pm.expect(body.status).to.eql('publish');",
+              "});",
+              "",
+              "pm.test('slug generado a partir del titulo', () => {",
+              "  pm.expect(body.slug).to.eql('post-publicado-' + token);",
+              "});",
+              "",
+              "pm.test('id asignado', () => {",
+              "  pm.expect(body.id).to.be.a('number');",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -74,28 +148,42 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"title\": \"Post publicado\", \"content\": \"Contenido\", \"status\": \"publish\"}"
+          "raw": "{\"title\": \"Post publicado {{run_token}}\", \"content\": \"Contenido\", \"status\": \"publish\"}"
         },
         "url": {
           "raw": "http://127.0.0.1:8000/posts/",
           "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
+          "host": ["127", "0", "0", "1"],
           "port": "8000",
-          "path": [
-            "posts",
-            ""
-          ]
+          "path": ["posts", ""]
         }
       },
       "response": []
     },
     {
       "name": "Create Post Missing Title",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "",
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "",
+              "pm.test('code VALIDATION_ERROR', () => {",
+              "  pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+              "});",
+              "",
+              "pm.test('details menciona el campo title', () => {",
+              "  pm.expect(body.details).to.be.an('array');",
+              "  pm.expect(body.details.some(d => d.field === 'title')).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -111,23 +199,37 @@
         "url": {
           "raw": "http://127.0.0.1:8000/posts/",
           "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
+          "host": ["127", "0", "0", "1"],
           "port": "8000",
-          "path": [
-            "posts",
-            ""
-          ]
+          "path": ["posts", ""]
         }
       },
       "response": []
     },
     {
       "name": "Create Post Missing Content",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "",
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+              "",
+              "pm.test('code VALIDATION_ERROR', () => {",
+              "  pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+              "});",
+              "",
+              "pm.test('details menciona el campo content', () => {",
+              "  pm.expect(body.details).to.be.an('array');",
+              "  pm.expect(body.details.some(d => d.field === 'content')).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -143,17 +245,9 @@
         "url": {
           "raw": "http://127.0.0.1:8000/posts/",
           "protocol": "http",
-          "host": [
-            "127",
-            "0",
-            "0",
-            "1"
-          ],
+          "host": ["127", "0", "0", "1"],
           "port": "8000",
-          "path": [
-            "posts",
-            ""
-          ]
+          "path": ["posts", ""]
         }
       },
       "response": []
