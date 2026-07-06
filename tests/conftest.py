@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from app.models.user import User
 
 import app.models  # noqa: F401  (registra modelos en Base.metadata)
 from app.database import Base, get_db
@@ -34,7 +35,37 @@ def db_session(db_engine):
         yield session
     finally:
         session.close()
+        
+@pytest.fixture
+def seed_users(db_session):
+    """
+    Seed opt-in: solo los tests que lo piden explícitamente (o vía un fixture
+    autouse local a su módulo) reciben usuarios sembrados. No es autouse para
+    no colisionar con tests que crean su propia Ana (ana@example.com).
+    Provee:
+        - Ana (id=1)
+        - Luis (id=2)
+    """
 
+    if db_session.get(User, 1) is None:
+        db_session.add(
+            User(
+                id=1,
+                name="Ana",
+                email="ana@example.com",
+            )
+        )
+
+    if db_session.get(User, 2) is None:
+        db_session.add(
+            User(
+                id=2,
+                name="Luis",
+                email="luis@example.com",
+            )
+        )
+
+    db_session.commit()
 
 @pytest.fixture
 def client(db_engine):
