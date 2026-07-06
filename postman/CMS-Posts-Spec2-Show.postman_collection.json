@@ -1,0 +1,76 @@
+{
+  "info": {
+    "name": "CMS Posts - Spec 2 Show",
+    "description": "Coleccion de Spec 2 (Show): GET /posts/{id}, incluyendo el caso feliz, el 404 por id inexistente y el 404 para posts en trash. Antes de correrla: 1) `python -m alembic upgrade head`, 2) `python postman/seed_show_data.py`, 3) levantar el server (`uvicorn app.main:app`). Cada request usa ids sembrados por el script y variables de coleccion para no hardcodear valores dentro de los requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:8000" },
+    { "key": "show_happy_id", "value": "1" },
+    { "key": "show_trash_id", "value": "2" },
+    { "key": "nonexistent_id", "value": "999999" }
+  ],
+  "item": [
+    {
+      "name": "GET - Show",
+      "item": [
+        {
+          "name": "GET show happy path - devuelve el post completo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/posts/{{show_happy_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "const expected = ['id','title','content','excerpt','slug','status','author_id','created_at','updated_at','published_at','deleted_at'];",
+              "pm.test('respuesta con 11 campos canonicos', () => pm.expect(Object.keys(body).sort()).to.eql(expected.sort()));",
+              "pm.test('id numerico', () => pm.expect(body.id).to.be.a('number'));",
+              "pm.test('title presente', () => pm.expect(body.title).to.be.a('string').and.not.empty);",
+              "pm.test('slug presente', () => pm.expect(body.slug).to.be.a('string').and.not.empty);",
+              "pm.test('status valido', () => pm.expect(body.status).to.eql('draft'));"
+            ] }
+          }]
+        },
+        {
+          "name": "GET show id inexistente - 404 POST_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/posts/{{nonexistent_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+              "const body = pm.response.json();",
+              "pm.test('code POST_NOT_FOUND', () => pm.expect(body.code).to.eql('POST_NOT_FOUND'));",
+              "pm.test('status 404 en body', () => pm.expect(body.status).to.eql(404));",
+              "pm.test('error presente', () => pm.expect(body.error).to.be.a('string').and.not.empty);"
+            ] }
+          }]
+        },
+        {
+          "name": "GET show post en trash - 404 POST_NOT_FOUND",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/posts/{{show_trash_id}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+              "const body = pm.response.json();",
+              "pm.test('code POST_NOT_FOUND', () => pm.expect(body.code).to.eql('POST_NOT_FOUND'));",
+              "pm.test('status 404 en body', () => pm.expect(body.status).to.eql(404));"
+            ] }
+          }]
+        }
+      ]
+    }
+  ]
+}

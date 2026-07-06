@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.errors.exceptions import ValidationError
-from app.models.post import POST_STATUSES
-from app.schemas.post import Pagination, PostList
+from app.errors.exceptions import PostNotFound, ValidationError
+from app.models.post import POST_STATUSES, Post
+from app.schemas.post import Pagination, PostList, PostRead
 from app.services.post_query import ORDERABLE, list_posts
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -50,3 +50,11 @@ def index(
             total=total, page=page, per_page=per_page, total_pages=total_pages
         ),
     )
+
+
+@router.get("/{id}", response_model=PostRead)
+def show(id: int, db: Session = Depends(get_db)):
+    post = db.get(Post, id)
+    if post is None or post.status == "trash":
+        raise PostNotFound()
+    return post
