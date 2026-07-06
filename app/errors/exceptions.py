@@ -3,7 +3,7 @@ class AppError(Exception):
         self.status = status
         self.code = code
         self.message = message
-        self.details = details
+        self.details = details if details is not None else []
         super().__init__(message)
 
 

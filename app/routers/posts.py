@@ -1,7 +1,7 @@
 import re
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -97,3 +97,29 @@ def replace_post(post_id: int, body: PostReplace, db: Session = Depends(get_db))
     db.commit()
     db.refresh(post)
     return post
+
+@router.delete("/{id}")
+def delete_post(
+    id: int,
+    force: bool = Query(False, description="Si es true, elimina el registro permanentemente"),
+    db: Session = Depends(get_db),
+):
+    """
+    DELETE /posts/{id}          -> soft delete (status=trash), 200 + PostRead
+    DELETE /posts/{id}?force=true -> hard delete, 204 sin body
+    """
+    post = db.query(Post).filter(Post.id == id).first()
+    if post is None:
+        raise PostNotFound()
+
+    if force:
+        db.delete(post)
+        db.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    service = PostStateService()
+    post = service.transition(post, "trash")
+    db.commit()
+    db.refresh(post)
+
+    return PostRead.model_validate(post)

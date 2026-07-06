@@ -1,0 +1,197 @@
+{
+  "info": {
+    "name": "Spec 5 - Delete Post (Clean)",
+    "description": "Tests para DELETE /posts/{id} y force delete siguiendo Spec 5",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "post_id",
+      "value": "1"
+    },
+    {
+      "key": "deleted_at_backup",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Soft delete - existing post (200 + PostRead)",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/{{post_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test('status is trash', () => {",
+              "  pm.expect(body.status).to.eql('trash');",
+              "});",
+              "",
+              "pm.test('deleted_at is set', () => {",
+              "  pm.expect(body.deleted_at).to.not.be.null;",
+              "  pm.collectionVariables.set('deleted_at_backup', body.deleted_at);",
+              "});",
+              "",
+              "pm.test('PostRead contract (11 fields)', () => {",
+              "  const expected = [",
+              "    'id','title','content','excerpt','slug','status',",
+              "    'author_id','created_at','updated_at','published_at','deleted_at'",
+              "  ];",
+              "  pm.expect(Object.keys(body).sort()).to.eql(expected.sort());",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Soft delete idempotent - already trashed",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/{{post_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', () => {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test('still trash', () => {",
+              "  pm.expect(body.status).to.eql('trash');",
+              "});",
+              "",
+              "pm.test('deleted_at preserved or stable', () => {",
+              "  const prev = pm.collectionVariables.get('deleted_at_backup');",
+              "  if (prev) {",
+              "    pm.expect(body.deleted_at).to.eql(prev);",
+              "  }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Force delete - hard delete (204)",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/{{post_id}}?force=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 204', () => {",
+              "  pm.response.to.have.status(204);",
+              "});",
+              "",
+              "pm.test('Empty body', () => {",
+              "  pm.expect(pm.response.text()).to.eql('');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Force delete - post not found after deletion (404)",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/{{post_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test('POST_NOT_FOUND code', () => {",
+              "  pm.expect(body.code).to.eql('POST_NOT_FOUND');",
+              "});",
+              "",
+              "pm.test('error format', () => {",
+              "  pm.expect(body.error).to.eql('Post not found');",
+              "  pm.expect(body.status).to.eql(404);",
+              "  pm.expect(body.details).to.eql([]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing post - soft delete (404)",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/999999"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test('POST_NOT_FOUND', () => {",
+              "  pm.expect(body.code).to.eql('POST_NOT_FOUND');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Missing post - force delete (404)",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/posts/999999?force=true"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404', () => {",
+              "  pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "",
+              "pm.test('POST_NOT_FOUND', () => {",
+              "  pm.expect(body.code).to.eql('POST_NOT_FOUND');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
