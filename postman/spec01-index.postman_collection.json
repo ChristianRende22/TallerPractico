@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "CMS Posts API",
+    "name": "Spec 01 - Index (GET /posts)",
     "description": "Colección para probar la API CMS de Posts. Spec 0 (health) + Spec 1 (GET /posts index). baseUrl por defecto: http://127.0.0.1:8000",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
